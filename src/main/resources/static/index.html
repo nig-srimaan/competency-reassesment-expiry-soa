@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competency Reassessment &amp; Expiry Management System | SOA Portal</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Top Enterprise Navigation Bar -->
+    <header class="navbar">
+        <div class="brand">
+            <div class="brand-logo">SOA</div>
+            <div>
+                <h1>Competency Reassessment Expiry System</h1>
+                <span class="subtitle">SOA Workforce Compliance &amp; Skill Lifecycle Monitor &bull; Team-18 (KLH University)</span>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <div id="soaConnectionBadge" class="connection-badge online" title="Service-Oriented Architecture Endpoint Status">
+                <span class="dot"></span>
+                <span id="soaConnectionText">SOA REST Engine: Active</span>
+            </div>
+            <button class="btn-outline" onclick="exportToCSV()" title="Export Filtered Competency Ledger to CSV">
+                &#128190; Export CSV
+            </button>
+            <button class="btn-outline" onclick="window.print()" title="Print / Save Official PDF Compliance Audit">
+                &#128424; Print Audit
+            </button>
+            <button class="btn-outline" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Theme">
+                &#9790; Dark Mode
+            </button>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- 5-Card Real-Time KPI Summary Grid -->
+        <section class="kpi-grid">
+            <div class="kpi-card total">
+                <div class="kpi-header">
+                    <h3>Total Competencies</h3>
+                    <span class="kpi-tag">Tracked SOA Records</span>
+                </div>
+                <p id="kpiTotal">0</p>
+                <div class="kpi-foot" id="kpiAvgScore">Avg Assessment Score: 0%</div>
+            </div>
+            <div class="kpi-card valid">
+                <div class="kpi-header">
+                    <h3>Active &amp; Valid</h3>
+                    <span class="kpi-tag valid-tag">&gt; 30 Days Left</span>
+                </div>
+                <p id="kpiValid">0</p>
+                <div class="kpi-foot">Verified Operational Readiness</div>
+            </div>
+            <div class="kpi-card warning">
+                <div class="kpi-header">
+                    <h3>Expiring Soon</h3>
+                    <span class="kpi-tag warning-tag">&le; 30 Days Window</span>
+                </div>
+                <p id="kpiExpiring">0</p>
+                <div class="kpi-foot">Proactive Reassessment Alert</div>
+            </div>
+            <div class="kpi-card danger">
+                <div class="kpi-header">
+                    <h3>Expired (Overdue)</h3>
+                    <span class="kpi-tag danger-tag">Action Required</span>
+                </div>
+                <p id="kpiExpired">0</p>
+                <div class="kpi-foot">Mandatory Renewal Pending</div>
+            </div>
+            <div class="kpi-card readiness">
+                <div class="kpi-header">
+                    <h3>Compliance Readiness</h3>
+                    <span class="kpi-tag primary-tag">Workforce SLA</span>
+                </div>
+                <p id="kpiComplianceRate">0%</p>
+                <div class="progress-bar-wrap">
+                    <div id="complianceProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analytics & Risk Distribution Bar -->
+        <section class="analytics-strip card">
+            <div class="analytics-col">
+                <div class="analytics-title">Lifecycle Risk Distribution</div>
+                <div class="stacked-bar" id="lifecycleStackedBar">
+                    <div id="barValid" class="bar-seg valid" style="width: 60%"></div>
+                    <div id="barExpiring" class="bar-seg warning" style="width: 20%"></div>
+                    <div id="barExpired" class="bar-seg danger" style="width: 20%"></div>
+                </div>
+                <div class="bar-legend">
+                    <span><i class="legend-dot valid"></i> Valid</span>
+                    <span><i class="legend-dot warning"></i> Expiring Soon (&le;30d)</span>
+                    <span><i class="legend-dot danger"></i> Expired (&lt;0d)</span>
+                </div>
+            </div>
+            <div class="analytics-divider"></div>
+            <div class="analytics-col">
+                <div class="analytics-title">Departmental Competency Coverage</div>
+                <div id="deptBreakdownChips" class="dept-chips">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            <div class="analytics-divider"></div>
+            <div class="analytics-col soa-endpoint-box">
+                <div class="analytics-title">Active SOA REST Contract</div>
+                <code id="lastApiCallDisplay">GET /api/competencies &rarr; 200 OK</code>
+                <span class="soa-sub">Spring Boot 3.2 REST Controller &bull; JSON</span>
+            </div>
+        </section>
+
+        <!-- Main Workspace Layout: Left Form + Right Ledger Table -->
+        <div class="content-grid">
+            <!-- Left Panel: Register Competency Assessment -->
+            <section class="card form-panel">
+                <div class="card-title-row">
+                    <h2>Register Competency Assessment</h2>
+                    <span class="method-pill post">POST</span>
+                </div>
+                <form id="competencyForm" onsubmit="createCompetency(event)">
+                    <div class="form-row-2">
+                        <div>
+                            <label for="empId">Employee ID</label>
+                            <input type="text" id="empId" placeholder="e.g., EMP-109" required>
+                        </div>
+                        <div>
+                            <label for="criticalityTier">Criticality Tier</label>
+                            <select id="criticalityTier">
+                                <option value="CRITICAL" selected>CRITICAL</option>
+                                <option value="HIGH">HIGH</option>
+                                <option value="STANDARD">STANDARD</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <label for="empName">Employee Full Name</label>
+                    <input type="text" id="empName" placeholder="e.g., Saraf Abhinav" required>
+
+                    <label for="department">Engineering Department</label>
+                    <select id="department">
+                        <option value="Platform Engineering">Platform Engineering</option>
+                        <option value="Cloud &amp; DevSecOps">Cloud &amp; DevSecOps</option>
+                        <option value="Cybersecurity &amp; Audit">Cybersecurity &amp; Audit</option>
+                        <option value="Data &amp; AI Governance">Data &amp; AI Governance</option>
+                        <option value="Enterprise Architecture">Enterprise Architecture</option>
+                    </select>
+
+                    <label for="skillName">Competency / Certification Title</label>
+                    <input type="text" id="skillName" placeholder="e.g., AWS Cloud Security" required>
+
+                    <div class="form-row-2">
+                        <div>
+                            <label for="score">Score (%)</label>
+                            <input type="number" id="score" min="50" max="100" value="88" required>
+                        </div>
+                        <div>
+                            <label for="validityMonths">Validity Window</label>
+                            <select id="validityMonths">
+                                <option value="6">6 Months</option>
+                                <option value="12" selected>12 Months</option>
+                                <option value="24">24 Months</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div>
+                            <label for="assessedDate">Assessed Date</label>
+                            <input type="date" id="assessedDate" required>
+                        </div>
+                        <div>
+                            <label for="evaluatorName">Evaluator Name</label>
+                            <input type="text" id="evaluatorName" value="Venkateshwari Ketineni" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">+ Register Competency Record</button>
+                </form>
+            </section>
+
+            <!-- Right Panel: Workforce Competency Expiry Ledger -->
+            <section class="card table-panel">
+                <div class="table-header-bar">
+                    <div>
+                        <h2>Workforce Competency Expiry Ledger</h2>
+                        <p class="panel-subtitle">Automatically sorted by urgency (lowest remaining validity days first)</p>
+                    </div>
+                    <div class="filter-controls">
+                        <input type="text" id="searchInput" placeholder="Search ID, employee, or skill..." oninput="filterRecords()">
+                        <select id="deptFilter" onchange="filterRecords()">
+                            <option value="ALL">All Departments</option>
+                            <option value="Platform Engineering">Platform Engineering</option>
+                            <option value="Cloud & DevSecOps">Cloud &amp; DevSecOps</option>
+                            <option value="Cybersecurity & Audit">Cybersecurity &amp; Audit</option>
+                            <option value="Data & AI Governance">Data &amp; AI Governance</option>
+                            <option value="Enterprise Architecture">Enterprise Architecture</option>
+                        </select>
+                        <select id="statusFilter" onchange="filterRecords()">
+                            <option value="ALL">All Statuses</option>
+                            <option value="VALID">Valid (&gt; 30 Days)</option>
+                            <option value="EXPIRING_SOON">Expiring Soon (&le; 30 Days)</option>
+                            <option value="EXPIRED">Expired (Action Required)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Emp ID</th>
+                                <th>Employee &amp; Dept</th>
+                                <th>Competency &amp; Tier</th>
+                                <th>Score</th>
+                                <th>Assessed</th>
+                                <th>Expiry Date</th>
+                                <th>Days Left</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="competencyTableBody">
+                            <!-- Populated dynamically via SOA REST API -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Reassessment & Audit History Modal -->
+    <div id="reassessModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <span class="method-pill put">PUT /api/competencies/{id}/reassess</span>
+                    <h3>Complete Competency Reassessment</h3>
+                </div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <p id="modalEmployeeInfo" class="modal-emp-banner"></p>
+            <input type="hidden" id="reassessRecordId">
+
+            <div class="modal-grid">
+                <div>
+                    <label for="newScore">New Reassessment Score (%)</label>
+                    <input type="number" id="newScore" min="50" max="100" value="92" required>
+                </div>
+                <div>
+                    <label for="newValidityMonths">Renewal Validity Duration</label>
+                    <select id="newValidityMonths">
+                        <option value="6">6 Months</option>
+                        <option value="12" selected>12 Months</option>
+                        <option value="24">24 Months</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-grid">
+                <div>
+                    <label for="modalEvaluator">Verifying Evaluator</label>
+                    <input type="text" id="modalEvaluator" value="Venkateshwari Ketineni">
+                </div>
+                <div>
+                    <label for="modalRemarks">Verification Remarks</label>
+                    <input type="text" id="modalRemarks" value="Passed practical SOA compliance reassessment">
+                </div>
+            </div>
+
+            <!-- Interactive Quick Score Preset Buttons -->
+            <div class="preset-bar">
+                <span>Quick Evaluator Rubric:</span>
+                <button type="button" class="btn-chip" onclick="setRubricScore(96, 'Distinction in practical lab & audit check')">Distinction (96%)</button>
+                <button type="button" class="btn-chip" onclick="setRubricScore(88, 'Verified standard competency renewal')">Proficient (88%)</button>
+                <button type="button" class="btn-chip" onclick="setRubricScore(76, 'Conditional pass - 6M review recommended')">Threshold Pass (76%)</button>
+            </div>
+
+            <!-- Audit History Section inside Modal -->
+            <div class="audit-history-box">
+                <h4>Certification Lifecycle &amp; Audit History</h4>
+                <div id="modalAuditList" class="audit-list"></div>
+            </div>
+
+            <div class="modal-actions">
+                <button onclick="submitReassessment()" class="btn-success">&#10004; Verify &amp; Renew Competency</button>
+                <button onclick="closeModal()" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <footer class="footer">
+        <div><strong>Competency Reassessment Expiry System</strong> &mdash; Service-Oriented Architecture (SOA) Mini Project</div>
+        <div>Developed by <strong>Team-18</strong>: K. Srimaan (2420030418), Jai Vardhan (2420090104), S. Abhinav (2420090058) &bull; Guide: Venkateshwari Ketineni &bull; KLH University</div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
